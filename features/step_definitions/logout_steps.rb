@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-#Scenario: Admin logout from welcome page
 Given('I am on welcome page') do
     visit welcome_path
 end
