@@ -1,5 +1,5 @@
 Feature: Logout
-    Admin logout
+    Admin can logout
 
 Background: Successful login with a tamu.edu email
   Given I am on the login page
