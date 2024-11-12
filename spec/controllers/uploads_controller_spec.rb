@@ -40,7 +40,7 @@ RSpec.describe UploadsController, type: :controller do
     allow(controller).to receive(:current_logged_in_admin).and_return(admin)
   end
 
-  describe 'POST #create' do
+  describe 'POST #uploads' do
     context 'with valid parameters' do
       it 'uploads a CSV file successfully' do
       old_controller = @controller
@@ -55,14 +55,14 @@ RSpec.describe UploadsController, type: :controller do
       @controller = old_controller
       expect(response).to render_template('welcome/index')
 
-      file = fixture_file_upload('test1.csv', 'text/csv')
+      file = fixture_file_upload('test1.xlsx', 'application/vnd.ms-excel')
 
-      post :create, params: { upload: { csv_file: file } }
+      post :handle_upload, params: { upload: { csv_file: file } }
 
       expect(response).to redirect_to(welcome_path)
-      expect(flash[:alert]).to eq('File uploaded successfully.')
+      expect(flash[:notice]).to eq('File uploaded successfully.')
 
-      expect(File.exist?(Rails.root.join('tmp/test_uploads/test1.csv'))).to be true
+      expect(File.exist?(Rails.root.join('tmp/test_uploads/test1.xlsx'))).to be true
       end
     end
 
@@ -81,10 +81,75 @@ RSpec.describe UploadsController, type: :controller do
         expect(response).to render_template('welcome/index')
         file = fixture_file_upload('test2.txt', 'text/plain')
 
-        post :create, params: { upload: { csv_file: file } }
+        post :handle_upload, params: { upload: { csv_file: file } }
 
-        expect(flash[:alert]).to eq("Invalid file type. Please upload a CSV file.")
+        expect(flash[:alert]).to eq("Invalid file type. Please choose a xlsx file to upload.")
         expect(File.exist?(Rails.root.join('tmp/test_uploads/test2.txt'))).to be false
+      end
+    end
+
+    context 'with no files selected' do
+      it 'does not upload an invalid file type' do
+        old_controller = @controller
+        @controller = WelcomeController.new
+        get :index
+        @controller = old_controller
+        expect(response).to redirect_to(login_path)
+        mock_user_sign_in
+        old_controller = @controller
+        @controller = WelcomeController.new
+        get :index
+        @controller = old_controller
+        expect(response).to render_template('welcome/index')
+
+        post :handle_upload, params: { upload: { csv_file: "" } }
+
+        expect(flash[:alert]).to eq("Invalid file type. Please choose a xlsx file to upload.")
+        expect(File.exist?(Rails.root.join('tmp/test_uploads/test2.txt'))).to be false
+      end
+    end
+
+
+    context 'with invalid parameters' do
+      it 'does not upload a file with a long name' do
+        old_controller = @controller
+        @controller = WelcomeController.new
+        get :index
+        @controller = old_controller
+        expect(response).to redirect_to(login_path)
+        mock_user_sign_in
+        old_controller = @controller
+        @controller = WelcomeController.new
+        get :index
+        @controller = old_controller
+        expect(response).to render_template('welcome/index')
+        file = fixture_file_upload('ThisIsAFileWithAVeryLongNameThatItShouldBeRejectedDoNotUploadThisFile.xlsx', 'application/vnd.ms-excel')
+
+        post :handle_upload, params: { upload: { csv_file: file } }
+
+        expect(flash[:alert]).to eq("File name is too long. Please rename the file and try again.")
+        expect(File.exist?(Rails.root.join('tmp/test_uploads/ThisIsAFileWithAVeryLongNameThatItShouldBeRejectedDoNotUploadThisFile.xlsx'))).to be false
+      end
+    end
+
+    context 'with invalid parameters' do
+      it 'does not upload a file with the same name' do
+        old_controller = @controller
+        @controller = WelcomeController.new
+        get :index
+        @controller = old_controller
+        expect(response).to redirect_to(login_path)
+        mock_user_sign_in
+        old_controller = @controller
+        @controller = WelcomeController.new
+        get :index
+        @controller = old_controller
+        expect(response).to render_template('welcome/index')
+        FileUtils.touch('tmp/test_uploads/RJ_Simple_Sample_Test.xlsx')
+        file = fixture_file_upload('RJ_Simple_Sample_Test.xlsx', 'text/plain')
+        post :handle_upload, params: { upload: { csv_file: file } }
+
+        expect(flash[:alert]).to eq("There is a file with the same name. Please rename the file and try again.")
       end
     end
   end
